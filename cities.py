@@ -1,8 +1,7 @@
 from typing import Dict, List, Tuple, Any
 from dataclasses import dataclass
-from pathlib import Path
-import csv
 import math
+import matplotlib.pyplot as plt
 
 @ dataclass
 class City:
@@ -117,40 +116,57 @@ class CityCollection:
         totalAtt = self.total_attendees()
         print('Total attendees travelling to', hostCity, 'from', len(cities), 'different cities:', totalAtt)
 
+    # 返回一个被排列的List [city_name,co2_emissions]
+    # 这个城市 以及 这个城市作为举办城市的CO2的总排放量 
+    # 根据所有 attendees 的 CO2 emission 排列
+    # lowest --> highest
     def sorted_by_emissions(self) -> List[Tuple[str, float]]:
-        raise NotImplementedError
-
-    def plot_top_emitters(self, city: City, n: int, save: bool):
-        raise NotImplementedError
-
-
-# cities = read_attendees_file('attendee_locations.csv')
-def read_attendees_file(file_path):
-    mycsv = open(file_path,'r')
-    myfile = csv.DictReader(mycsv)
-    cityList = []
-    for row in myfile:
-        name = row['city']
-        country = row['country']
-        number = int(row['N'])
-        lat = float(row['lat'])
-        lon = float(row['lon'])
-        city = City(name=name,country=country,numAtt=number,lat=lat,lon=lon)
-        cityList.append(city)
-    city_collection = CityCollection(cityList)
-    return city_collection
+        cities = self.cities
+        totalList = []
+        for i in range(len(cities)):
+            city = cities[i]
+            total_co2 = self.total_co2(city)
+            city_tuple = (city.name,total_co2)
+            totalList.append(city_tuple)
+        sorted_by_emission = sorted(totalList, key=lambda tup: tup[1])
+        return sorted_by_emission
 
 
+    def plot_top_emitters(self, city: City, n: int=10, save: bool=False):
+        co2_by_country = self.co2_by_country(city) # {country:distance}
+        sorted_co2 = sorted(zip(co2_by_country.values(), co2_by_country.keys()),reverse=True)
+        n_countries = sorted_co2[:n] # 前n个 里面的每个元素的类型是 元组
+        others = sorted_co2[n:] # 后面所有
+        other_sum = 0
+        for i in range(len(others)):
+            other_sum += others[i][0]
+        other = (other_sum,'All other countries')
+        n_countries.append(other)
+        fig=plt.figure()
+        for i in range(len(n_countries)):
+            plt.bar(n_countries[i][1],n_countries[i][0]/1000)
+        plt.title('Total emissions from each country(top' + str(n)+')')
+        plt.ylabel('Total emissions(tonnes CO2)')
+        plt.show()
+        if save is True:
+            name = city.name.lower().replace(' ','_') + '.png'
+            fig.savefig('./'+name)
+        else:
+            plt.show()
 
-file_path = Path('test.csv')
-collection = read_attendees_file('test.csv')
 
-zurich = City('Zurich','SW',1,47.22,8.33)
-greenwich = City('London','UK',15,0,0)
-conference_city = City('San Francisco', 'United States', 0, 37.7792808, -122.4192363)
-list_of_cities = [zurich,greenwich,conference_city]
-city_collection = CityCollection(list_of_cities)
-countries = collection.countries()
-attendees = collection.total_attendees()
-travel_by_country = collection.summary(zurich)
-print(travel_by_country)
+
+# zurich = City('Zurich','SW',1,47.22,8.33)
+# greenwich = City('London','UK',15,0,0)
+# conference_city = City('San Francisco', 'United States', 0, 37.7792808, -122.4192363)
+# buenos_aries = City('Buenos aries','SW',5,-34.6075616,-58.437076)
+# list_of_cities = [zurich,greenwich,conference_city]
+# city_collection = CityCollection(list_of_cities)
+
+# collection = read_attendees_file('attendee_locations.csv')
+# countries = collection.countries()
+# attendees = collection.total_attendees()
+# travel_by_country = collection.co2_by_country(zurich)
+
+# print(max(travel_by_country,key=lambda x:travel_by_country[x]))
+# collection.plot_top_emitters(zurich)
