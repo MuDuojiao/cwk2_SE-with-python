@@ -2,6 +2,7 @@ from typing import Dict, List, Tuple, Any
 from dataclasses import dataclass
 import math
 import matplotlib.pyplot as plt
+import numpy as np
 
 @ dataclass
 class City:
@@ -16,7 +17,7 @@ class City:
             raise ValueError('**The number of attendees must be positive integer**')
         if lat<-90 or lat>90:
             raise ValueError('**Latitude should be restricted to the -90 to 90**')
-        if lon<-180 or lon>1800:
+        if lon<-180 or lon>180:
             raise ValueError('**Longitude should be restricted to the -180 to 180**')
         self.name = name
         self.country = country
@@ -30,8 +31,8 @@ class City:
         lat2 = other.lat
         lon2 = other.lon
         R = 6371
-        part1 = math.sin((lat2-lat1)/2)**2
-        part2 = math.cos(lat1)*math.cos(lat2)*math.sin((lon2-lon1)/2)**2
+        part1 = (math.sin((lat2-lat1)/2))**2
+        part2 = math.cos(lat1)*math.cos(lat2)*(math.sin((lon2-lon1)/2))**2
         distance = 2*R*math.asin(math.sqrt(part1+part2))
         return distance
         
@@ -79,13 +80,18 @@ class CityCollection:
     # 该国家的人数 * 该国家到 city 的距离
     def travel_by_country(self, city: City) -> Dict[str, float]:
         cities = self.cities
-        tra_by_coun = {}
+        countryList = []
         for i in range(len(cities)):
-            name = cities[i].name
-            numAtt = cities[i].numAtt
-            dist = cities[i].distance_to(city)
-            tra_by_coun[name] = numAtt*dist
-        return tra_by_coun
+            countryList.append(cities[i].country)
+        countryList = sorted(list(set(countryList)))
+        travelDict = {}
+        for i in range(len(countryList)):
+            travelDict[countryList[i]] = 0
+        for i in range(len(cities)):
+            for j in range(len(countryList)):
+                if cities[i].country == countryList[j]:
+                    travelDict[countryList[j]] += cities[i].numAtt *cities[i].distance_to(city)
+        return travelDict
 
     # 所有参会人的 CO2 消耗
     def total_co2(self, city: City) -> float:
@@ -98,13 +104,18 @@ class CityCollection:
     # 每个国家参会人的 CO2 消耗
     def co2_by_country(self, city: City) -> Dict[str, float]:
         cities = self.cities
-        co2_by_coun = {}
+        countryList = []
         for i in range(len(cities)):
-            name = cities[i].name
-            numAtt = cities[i].numAtt
-            co2 = cities[i].co2_to(city)
-            co2_by_coun[name] = numAtt*co2
-        return co2_by_coun
+            countryList.append(cities[i].country)
+        countryList = sorted(list(set(countryList)))
+        co2Dict = {}
+        for i in range(len(countryList)):
+            co2Dict[countryList[i]] = 0
+        for i in range(len(cities)):
+            for j in range(len(countryList)):
+                if cities[i].country == countryList[j]:
+                    co2Dict[countryList[j]] += cities[i].numAtt *cities[i].co2_to(city)
+        return co2Dict
         
     def summary(self, city: City):
         cities = self.cities
@@ -163,7 +174,8 @@ class CityCollection:
 # list_of_cities = [zurich,greenwich,conference_city]
 # city_collection = CityCollection(list_of_cities)
 
-# collection = read_attendees_file('attendee_locations.csv')
+
+
 # countries = collection.countries()
 # attendees = collection.total_attendees()
 # travel_by_country = collection.co2_by_country(zurich)
